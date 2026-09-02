@@ -1,6 +1,6 @@
 {
   "name": "Controle do Chá",
-  "short_name": "Chá Turma",
+  "short_name": "Controle de chá",
   "description": "Controle das vendas de bandejas de chá do terceirão — turma e vendas pessoais.",
   "start_url": "./index.html",
   "scope": "./",
