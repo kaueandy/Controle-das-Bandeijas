@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle do Chá</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1E2A22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chá Turma">
+<style>
+  :root{
+    --bg: #1E2A22;
+    --bg-panel: #263628;
+    --bg-panel-2: #2D3F30;
+    --cream: #F2ECDB;
+    --cream-dim: #C9C2AC;
+    --amber: #D9A548;
+    --amber-dim: #a9803a;
+    --sage: #8AA88F;
+    --success: #7CAE7F;
+    --success-bg: rgba(124,174,127,0.14);
+    --warn: #C97B4A;
+    --warn-bg: rgba(201,123,74,0.14);
+    --line: rgba(242,236,219,0.12);
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--cream);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+  h1,h2,h3{ font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif; font-weight:600; margin:0; }
+  .wrap{ max-width: 880px; margin: 0 auto; }
+
+  /* ---------- Header / Hero ---------- */
+  .top{
+    display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start;
+    padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 28px;
+  }
+  .top-text{ flex: 1 1 280px; }
+  .eyebrow{ color: var(--sage); font-size: 13px; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .top h1{ font-size: 32px; line-height:1.15; margin-bottom: 10px; }
+  .top p{ color: var(--cream-dim); font-size: 14.5px; max-width: 46ch; margin:0; }
+
+  .cup-block{ flex: 0 0 210px; display:flex; align-items:center; gap:18px; }
+  .cup-svg{ width:78px; height:96px; flex-shrink:0; }
+  .cup-figures .big{ font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif; font-size: 30px; font-weight:600; }
+  .cup-figures .lbl{ font-size: 12.5px; color: var(--cream-dim); margin-top:2px; }
+  .cup-figures .pct{ font-size: 13px; color: var(--amber); margin-top: 8px; }
+
+  /* ---------- Stat cards ---------- */
+  .stats{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 30px; }
+  .stat{
+    background: var(--bg-panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .stat .n{ font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif; font-size: 22px; font-weight:600; }
+  .stat .l{ font-size: 12.5px; color: var(--cream-dim); margin-top: 3px; }
+  .stat.warn .n{ color: var(--warn); }
+  .stat.ok .n{ color: var(--success); }
+
+  .meta-row{ display:flex; align-items:center; gap:10px; margin-bottom: 32px; font-size: 14px; color: var(--cream-dim); }
+  .meta-row input{
+    background: var(--bg-panel); border:1px solid var(--line); color:var(--cream);
+    border-radius: 6px; padding: 6px 10px; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; width:120px;
+  }
+  .meta-row input:focus{ outline: 2px solid var(--amber); outline-offset:1px; }
+
+  /* ---------- Tabs ---------- */
+  .tabs{ display:flex; gap: 24px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+  .tab-btn{
+    background:none; border:none; color: var(--cream-dim); font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px;
+    font-weight:600; padding: 10px 2px 12px; cursor:pointer; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active{ color: var(--cream); border-bottom-color: var(--amber); }
+  .tab-btn:focus-visible{ outline: 2px solid var(--amber); outline-offset:2px; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  /* ---------- Add form ---------- */
+  .add-form{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom: 20px;
+    background: var(--bg-panel); border:1px solid var(--line); border-radius: var(--radius); padding: 16px;
+  }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size: 12px; color: var(--cream-dim); }
+  .field input{
+    background: var(--bg-panel-2); border:1px solid var(--line); color: var(--cream);
+    border-radius:6px; padding: 8px 10px; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; min-width: 0;
+  }
+  .field input:focus{ outline: 2px solid var(--amber); outline-offset:1px; }
+  .f-nome{ flex: 1 1 160px; }
+  .f-num{ width: 90px; }
+  .f-tel{ flex: 1 1 130px; }
+  .btn{
+    background: var(--amber); color: #26210f; border:none; border-radius:6px;
+    padding: 9px 16px; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .btn:hover{ background: #e6b357; }
+  .btn:focus-visible{ outline: 2px solid var(--cream); outline-offset:2px; }
+
+  /* ---------- Table ---------- */
+  .tbl-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius: var(--radius); }
+  table{ width:100%; border-collapse: collapse; min-width: 560px; }
+  thead th{
+    text-align:left; font-size:12.5px; color: var(--cream-dim); font-weight:600;
+    padding: 10px 12px; background: var(--bg-panel-2); border-bottom: 1px solid var(--line);
+  }
+  tbody td{ padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background: rgba(242,236,219,0.03); }
+  td input[type=text], td input[type=number]{
+    background: transparent; border:1px solid transparent; color: var(--cream);
+    border-radius:5px; padding: 5px 6px; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; width: 100%;
+  }
+  td input[type=number]{ width: 78px; }
+  td input:hover{ border-color: var(--line); }
+  td input:focus{ border-color: var(--amber); outline:none; background: var(--bg-panel-2); }
+  .valor{ color: var(--amber); font-weight:600; white-space:nowrap; }
+
+  .chip{
+    display:inline-flex; align-items:center; gap:5px; border:none; cursor:pointer;
+    border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight:600; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  .chip.pago{ background: var(--success-bg); color: var(--success); }
+  .chip.pendente{ background: var(--warn-bg); color: var(--warn); }
+  .chip.parcial{ background: rgba(217,165,72,0.15); color: var(--amber); }
+
+  .del-btn{
+    background:none; border:none; color: var(--cream-dim); cursor:pointer; font-size: 17px;
+    padding: 4px 6px; border-radius:5px; line-height:1;
+  }
+  .del-btn:hover{ color: var(--warn); background: rgba(201,123,74,0.1); }
+
+  .empty{ padding: 28px 16px; text-align:center; color: var(--cream-dim); font-size: 14px; }
+
+  .foot-note{ margin-top: 34px; font-size: 12.5px; color: var(--cream-dim); text-align:center; }
+
+  .sync-badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color: var(--cream-dim);
+    margin-bottom: 18px; padding: 5px 10px; border-radius: 999px; background: var(--bg-panel); border:1px solid var(--line);
+  }
+  .sync-dot{ width:7px; height:7px; border-radius:50%; background: var(--cream-dim); flex-shrink:0; }
+  .sync-badge.ok .sync-dot{ background: var(--success); }
+  .sync-badge.ok{ color: var(--success); }
+  .sync-badge.err .sync-dot{ background: var(--warn); }
+  .sync-badge.err{ color: var(--warn); }
+
+  @media (max-width: 560px){
+    .stats{ grid-template-columns: 1fr 1fr; }
+    .top{ flex-direction:column; }
+    .cup-block{ flex-direction:row; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="top-text">
+      <div class="eyebrow">Venda das bandejas de chá</div>
+      <h1>Controle do Chá</h1>
+      <p>Acompanhe o dinheiro que a turma te envia via Pix e as suas próprias vendas, tudo em um só lugar.</p>
+    </div>
+    <div class="cup-block">
+      <svg class="cup-svg" viewBox="0 0 78 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="cupClip">
+            <path d="M8 10 H70 L64 78 Q64 88 39 88 Q14 88 14 78 L8 10 Z"/>
+          </clipPath>
+        </defs>
+        <rect id="liquid" x="0" y="96" width="78" height="86" fill="var(--amber)" clip-path="url(#cupClip)"/>
+        <path d="M8 10 H70 L64 78 Q64 88 39 88 Q14 88 14 78 L8 10 Z" stroke="var(--cream)" stroke-width="2.5" fill="none"/>
+        <path d="M70 20 Q84 20 84 34 Q84 48 68 46" stroke="var(--cream)" stroke-width="2.5" fill="none"/>
+        <line x1="4" y1="10" x2="74" y2="10" stroke="var(--cream)" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div class="cup-figures">
+        <div class="big" id="figTotal">R$ 0</div>
+        <div class="lbl">arrecadado</div>
+        <div class="pct" id="figPct"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat ok">
+      <div class="n" id="statRecebido">R$ 0</div>
+      <div class="l">Já recebido</div>
+    </div>
+    <div class="stat warn">
+      <div class="n" id="statPendente">R$ 0</div>
+      <div class="l">Ainda a receber</div>
+    </div>
+    <div class="stat">
+      <div class="n" id="statCartoes">0</div>
+      <div class="l">Cartões vendidos (turma + você)</div>
+    </div>
+  </div>
+
+  <div class="sync-badge" id="syncBadge"><span class="sync-dot"></span><span id="syncText">Carregando…</span></div>
+
+  <div class="meta-row">
+    <span>Meta da turma (opcional):</span>
+    <input type="number" id="metaInput" placeholder="ex: 6400" min="0">
+    <span>reais</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="turma">Controle da turma (Pix)</button>
+    <button class="tab-btn" data-tab="vendas">Minhas vendas</button>
+  </div>
+
+  <!-- TURMA PANEL -->
+  <div class="panel active" id="panel-turma">
+    <form class="add-form" id="formTurma">
+      <div class="field f-nome">
+        <label for="turmaNome">Nome do(a) colega</label>
+        <input type="text" id="turmaNome" required>
+      </div>
+      <div class="field f-num">
+        <label for="turmaFolhas">Folhas (16 un.)</label>
+        <input type="number" id="turmaFolhas" min="1" value="1" required>
+      </div>
+      <button class="btn" type="submit">Adicionar</button>
+    </form>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Folhas</th>
+            <th>Esperado</th>
+            <th>Recebido</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="bodyTurma"></tbody>
+      </table>
+      <div class="empty" id="emptyTurma" style="display:none;">Ninguém cadastrado ainda. Adicione os colegas que vão te enviar o Pix.</div>
+    </div>
+  </div>
+
+  <!-- VENDAS PANEL -->
+  <div class="panel" id="panel-vendas">
+    <form class="add-form" id="formVendas">
+      <div class="field f-nome">
+        <label for="vendaNome">Nome</label>
+        <input type="text" id="vendaNome" required>
+      </div>
+      <div class="field f-num">
+        <label for="vendaCartoes">Cartões avulsos</label>
+        <input type="number" id="vendaCartoes" min="0" value="0">
+      </div>
+      <div class="field f-num">
+        <label for="vendaFolhas">Folhas (16 un.)</label>
+        <input type="number" id="vendaFolhas" min="0" value="0">
+      </div>
+      <div class="field f-tel">
+        <label for="vendaTel">Telefone</label>
+        <input type="text" id="vendaTel" placeholder="opcional">
+      </div>
+      <button class="btn" type="submit">Adicionar</button>
+    </form>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Cartões</th>
+            <th>Folhas</th>
+            <th>Valor</th>
+            <th>Pagamento</th>
+            <th>Telefone</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="bodyVendas"></tbody>
+      </table>
+      <div class="empty" id="emptyVendas" style="display:none;">Nenhuma venda registrada ainda.</div>
+    </div>
+  </div>
+
+  <div class="foot-note">Os dados ficam salvos automaticamente e sincronizados entre os aparelhos conectados.</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, onSnapshot,
+  enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ─────────────────────────────────────────────────────────
+// ⚠️ COLE AQUI as credenciais do seu projeto Firebase.
+// Você pega esses valores no Console do Firebase, em:
+// Configurações do projeto (⚙️) → Geral → "Seus apps" → SDK do Firebase.
+// ─────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBts4XEhZUEP7qow98PfxuaLq133kya41A",
+  authDomain: "controle-das-bandeijas.firebaseapp.com",
+  projectId: "controle-das-bandeijas",
+  storageBucket: "controle-das-bandeijas.firebasestorage.app",
+  messagingSenderId: "182309572185",
+  appId: "1:182309572185:web:bc4eaa8e475845d028ab48"
+};
+// Nome do documento onde tudo fica guardado. Se um dia vocês quiserem
+// separar turmas diferentes, é só trocar esse texto em cada cópia do app.
+const DOC_COLLECTION = 'controleCha';
+const DOC_ID = 'estado';
+// ─────────────────────────────────────────────────────────
+
+const firebaseReady = firebaseConfig.apiKey && firebaseConfig.apiKey !== 'COLE_AQUI';
+let db = null;
+let docRef = null;
+let applyingRemote = false; // evita loop: salvar o que acabou de chegar do servidor
+
+if(firebaseReady){
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  docRef = doc(db, DOC_COLLECTION, DOC_ID);
+  try{ await enableIndexedDbPersistence(db); }
+  catch(e){ /* modo privado ou várias abas abertas: segue sem cache offline do Firestore, ainda temos o localStorage */ }
+}
+
+const PRECO_FOLHA = 320;
+const PRECO_CARTAO = 20;
+const STORAGE_KEY = 'cha-turma-config-v1';
+
+let state = { turma: [], vendas: [], meta: 0 };
+let loaded = false;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function brl(n){ return 'R$ ' + (n||0).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0}); }
+
+function setSyncBadge(mode){
+  const badge = document.getElementById('syncBadge');
+  const text = document.getElementById('syncText');
+  badge.classList.remove('ok','err');
+  if(mode === 'ok'){ badge.classList.add('ok'); text.textContent = 'Sincronizado — todos os aparelhos veem o mesmo'; }
+  else if(mode === 'err'){ badge.classList.add('err'); text.textContent = 'Sem conexão — usando cópia salva neste aparelho'; }
+  else if(mode === 'local'){ text.textContent = 'Firebase não configurado — salvando só neste aparelho'; }
+  else { text.textContent = 'Carregando…'; }
+}
+
+function applyIncomingState(parsed){
+  applyingRemote = true;
+  state = { turma: parsed.turma || [], vendas: parsed.vendas || [], meta: parsed.meta || 0 };
+  migrateVendas();
+  loaded = true;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); // guarda cópia local também
+  document.getElementById('metaInput').value = state.meta || '';
+  renderAll();
+  applyingRemote = false;
+}
+
+async function loadState(){
+  if(firebaseReady){
+    onSnapshot(docRef, (snap)=>{
+      if(snap.exists()){
+        applyIncomingState(snap.data());
+      } else {
+        loaded = true; // documento ainda não existe no Firebase, começa vazio
+      }
+      setSyncBadge('ok');
+    }, (err)=>{
+      console.error('Erro de sincronização, usando cópia local:', err);
+      setSyncBadge('err');
+      if(!loaded){
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){ try{ applyIncomingState(JSON.parse(raw)); }catch(e){} }
+        loaded = true;
+      }
+    });
+    // dá um tempinho pro primeiro snapshot chegar; se demorar (offline na primeira vez), usa cache local
+    await new Promise(res=> setTimeout(res, 1200));
+    if(!loaded){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ try{ applyIncomingState(JSON.parse(raw)); }catch(e){} }
+      loaded = true;
+    }
+  } else {
+    setSyncBadge('local');
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      try{
+        const parsed = JSON.parse(raw);
+        state = { turma: parsed.turma || [], vendas: parsed.vendas || [], meta: parsed.meta || 0 };
+      }catch(e){ /* corrompido, mantém padrão */ }
+    }
+    migrateVendas();
+    loaded = true;
+  }
+}
+
+async function saveState(){
+  if(applyingRemote) return; // não reenviar o que acabou de chegar de fora
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); // cache local sempre, mesmo com Firebase
+  if(firebaseReady){
+    try{
+      await setDoc(docRef, state);
+      setSyncBadge('ok');
+    }catch(e){
+      console.error('Não sincronizou agora, mas ficou salvo neste aparelho:', e);
+      setSyncBadge('err');
+    }
+  }
+}
+
+function turmaEsperado(item){ return item.folhas * PRECO_FOLHA; }
+function turmaStatus(item){
+  const esperado = turmaEsperado(item);
+  if(item.recebido <= 0) return 'pendente';
+  if(item.recebido >= esperado) return 'pago';
+  return 'parcial';
+}
+function vendaValor(item){ return (Number(item.folhas||0) * PRECO_FOLHA) + (Number(item.cartoes||0) * PRECO_CARTAO); }
+
+// A cada 16 cartões avulsos, converte automaticamente em 1 folha completa
+function normalizeVenda(item){
+  item.cartoes = Number(item.cartoes) || 0;
+  item.folhas = Number(item.folhas) || 0;
+  while(item.cartoes >= 16){
+    item.cartoes -= 16;
+    item.folhas += 1;
+  }
+}
+
+function migrateVendas(){
+  state.vendas.forEach(item=>{
+    if(item.cartoes === undefined && item.quantidade !== undefined){
+      const total = Number(item.quantidade) || 0;
+      item.folhas = Math.floor(total / 16);
+      item.cartoes = total % 16;
+    }
+    if(item.cartoes === undefined) item.cartoes = 0;
+    if(item.folhas === undefined) item.folhas = 0;
+  });
+}
+
+function computeTotals(){
+  const totalEsperadoTurma = state.turma.reduce((s,i)=> s + turmaEsperado(i), 0);
+  const totalRecebidoTurma = state.turma.reduce((s,i)=> s + (Number(i.recebido)||0), 0);
+  const totalVendasPago = state.vendas.filter(v=>v.pago).reduce((s,v)=> s + vendaValor(v), 0);
+  const totalVendasPendente = state.vendas.filter(v=>!v.pago).reduce((s,v)=> s + vendaValor(v), 0);
+  const totalArrecadado = totalRecebidoTurma + totalVendasPago;
+  const totalPendente = (totalEsperadoTurma - totalRecebidoTurma) + totalVendasPendente;
+  const totalCartoes = state.vendas.reduce((s,v)=> s + Number(v.folhas||0)*16 + Number(v.cartoes||0), 0) + state.turma.reduce((s,i)=> s + Number(i.folhas||0)*16, 0);
+  return { totalEsperadoTurma, totalRecebidoTurma, totalVendasPago, totalVendasPendente, totalArrecadado, totalPendente, totalCartoes };
+}
+
+function renderStats(){
+  const t = computeTotals();
+  document.getElementById('figTotal').textContent = brl(t.totalArrecadado);
+  document.getElementById('statRecebido').textContent = brl(t.totalArrecadado);
+  document.getElementById('statPendente').textContent = brl(t.totalPendente);
+  document.getElementById('statCartoes').textContent = t.totalCartoes;
+
+  const liquid = document.getElementById('liquid');
+  const pctEl = document.getElementById('figPct');
+  if(state.meta && state.meta > 0){
+    const pct = Math.max(0, Math.min(100, (t.totalArrecadado / state.meta) * 100));
+    pctEl.textContent = Math.round(pct) + '% da meta';
+    const fillHeight = (pct/100) * 78;
+    liquid.setAttribute('y', 96 - fillHeight - 8);
+  } else {
+    pctEl.textContent = '';
+    liquid.setAttribute('y', 96);
+  }
+}
+
+function renderTurma(){
+  const body = document.getElementById('bodyTurma');
+  const empty = document.getElementById('emptyTurma');
+  body.innerHTML = '';
+  if(state.turma.length === 0){ empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  state.turma.forEach(item=>{
+    const esperado = turmaEsperado(item);
+    const status = turmaStatus(item);
+    const statusLabel = status === 'pago' ? 'Concluído' : status === 'parcial' ? 'Parcial' : 'Pendente';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeAttr(item.nome)}" data-id="${item.id}" data-field="nome" data-type="turma"></td>
+      <td><input type="number" min="1" value="${item.folhas}" data-id="${item.id}" data-field="folhas" data-type="turma"></td>
+      <td class="valor">${brl(esperado)}</td>
+      <td><input type="number" min="0" value="${item.recebido}" data-id="${item.id}" data-field="recebido" data-type="turma"></td>
+      <td><span class="chip ${status}">${statusLabel}</span></td>
+      <td><button class="del-btn" data-id="${item.id}" data-type="turma" title="Remover">×</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function renderVendas(){
+  const body = document.getElementById('bodyVendas');
+  const empty = document.getElementById('emptyVendas');
+  body.innerHTML = '';
+  if(state.vendas.length === 0){ empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  state.vendas.forEach(item=>{
+    const valor = vendaValor(item);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeAttr(item.nome)}" data-id="${item.id}" data-field="nome" data-type="venda"></td>
+      <td><input type="number" min="0" value="${item.cartoes}" data-id="${item.id}" data-field="cartoes" data-type="venda"></td>
+      <td><input type="number" min="0" value="${item.folhas}" data-id="${item.id}" data-field="folhas" data-type="venda"></td>
+      <td class="valor">${brl(valor)}</td>
+      <td><button class="chip ${item.pago ? 'pago' : 'pendente'}" data-id="${item.id}" data-type="pagamento">${item.pago ? '✓ Pago' : '✗ Pendente'}</button></td>
+      <td><input type="text" value="${escapeAttr(item.telefone||'')}" data-id="${item.id}" data-field="telefone" data-type="venda" placeholder="—"></td>
+      <td><button class="del-btn" data-id="${item.id}" data-type="venda" title="Remover">×</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+function renderAll(){
+  renderStats();
+  renderTurma();
+  renderVendas();
+}
+
+// --- events: add forms ---
+document.getElementById('formTurma').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const nome = document.getElementById('turmaNome').value.trim();
+  const folhas = Number(document.getElementById('turmaFolhas').value) || 1;
+  if(!nome) return;
+  state.turma.push({ id: uid(), nome, folhas, recebido: 0 });
+  e.target.reset();
+  document.getElementById('turmaFolhas').value = 1;
+  renderAll();
+  await saveState();
+});
+
+document.getElementById('formVendas').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const nome = document.getElementById('vendaNome').value.trim();
+  const cartoes = Number(document.getElementById('vendaCartoes').value) || 0;
+  const folhas = Number(document.getElementById('vendaFolhas').value) || 0;
+  const telefone = document.getElementById('vendaTel').value.trim();
+  if(!nome) return;
+  if(cartoes <= 0 && folhas <= 0) return;
+  const item = { id: uid(), nome, cartoes, folhas, telefone, pago: false };
+  normalizeVenda(item);
+  state.vendas.push(item);
+  e.target.reset();
+  document.getElementById('vendaCartoes').value = 0;
+  document.getElementById('vendaFolhas').value = 0;
+  renderAll();
+  await saveState();
+});
+
+// --- events: inline edits (delegated) ---
+document.body.addEventListener('change', async (e)=>{
+  const t = e.target;
+  if(!t.dataset) return;
+  const { id, field, type } = t.dataset;
+  if(!id || !field) return;
+  let list = type === 'turma' ? state.turma : type === 'venda' ? state.vendas : null;
+  if(!list) return;
+  const item = list.find(i=> i.id === id);
+  if(!item) return;
+  if(field === 'nome' || field === 'telefone'){
+    item[field] = t.value;
+  } else {
+    item[field] = Number(t.value) || 0;
+  }
+  if(type === 'venda' && (field === 'cartoes' || field === 'folhas')){
+    normalizeVenda(item);
+  }
+  renderAll();
+  await saveState();
+});
+
+// --- events: delete + payment toggle (delegated click) ---
+document.body.addEventListener('click', async (e)=>{
+  const t = e.target;
+  if(t.dataset && t.dataset.type === 'pagamento'){
+    const id = t.dataset.id;
+    const item = state.vendas.find(i=> i.id === id);
+    if(item){ item.pago = !item.pago; renderAll(); await saveState(); }
+    return;
+  }
+  if(t.classList.contains('del-btn')){
+    const id = t.dataset.id;
+    const type = t.dataset.type;
+    if(type === 'turma') state.turma = state.turma.filter(i=> i.id !== id);
+    if(type === 'venda') state.vendas = state.vendas.filter(i=> i.id !== id);
+    renderAll();
+    await saveState();
+  }
+});
+
+// --- tabs ---
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=> p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// --- meta input ---
+document.getElementById('metaInput').addEventListener('change', async (e)=>{
+  state.meta = Number(e.target.value) || 0;
+  renderStats();
+  await saveState();
+});
+
+// --- init ---
+(async function init(){
+  await loadState();
+  document.getElementById('metaInput').value = state.meta || '';
+  renderAll();
+})();
+
+// --- registra o service worker (permite instalar como app e abrir offline) ---
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=> console.error('SW falhou:', e));
+  });
+}
+</script>
+</body>
+</html>
