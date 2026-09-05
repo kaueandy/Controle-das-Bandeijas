@@ -135,6 +135,8 @@
   .chip.pago{ background: var(--success-bg); color: var(--success); }
   .chip.pendente{ background: var(--warn-bg); color: var(--warn); }
   .chip.parcial{ background: rgba(217,165,72,0.15); color: var(--amber); }
+  .chip.entregue{ background: var(--success-bg); color: var(--success); }
+  .chip.naoentregue{ background: rgba(242,236,219,0.08); color: var(--cream-dim); }
 
   .del-btn{
     background:none; border:none; color: var(--cream-dim); cursor:pointer; font-size: 17px;
@@ -160,6 +162,39 @@
     .stats{ grid-template-columns: 1fr 1fr; }
     .top{ flex-direction:column; }
     .cup-block{ flex-direction:row; }
+  }
+
+  /* ---------- Tabela em formato de cartão no celular ---------- */
+  @media (max-width: 720px){
+    .add-form{ flex-direction:column; align-items:stretch; }
+    .f-nome, .f-num, .f-tel{ width:100%; }
+    .add-form .btn{ width:100%; padding:12px; font-size:15px; }
+
+    .tbl-wrap{ overflow:visible; border:none; }
+    table{ min-width:0; width:100%; }
+    thead{ display:none; }
+    tbody{ display:flex; flex-direction:column; gap:12px; }
+    tbody tr{
+      display:flex; flex-direction:column; background: var(--bg-panel);
+      border:1px solid var(--line); border-radius: var(--radius); overflow:hidden;
+    }
+    tbody tr:hover{ background: var(--bg-panel); }
+    tbody td{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+      padding: 11px 14px; border-bottom:1px solid var(--line); border-radius:0;
+    }
+    tbody tr td:last-child{ border-bottom:none; }
+    td::before{
+      content: attr(data-label); font-size:11.5px; font-weight:700; letter-spacing:.3px;
+      text-transform:uppercase; color: var(--cream-dim); flex-shrink:0;
+    }
+    td[data-label='Nome']{ background: var(--bg-panel-2); }
+    td[data-label='Nome']::before{ display:none; }
+    td[data-label='Nome'] input{ font-size:16px; font-weight:600; }
+    td input[type=text], td input[type=number]{ text-align:right; width:auto; max-width:60%; }
+    td.td-actions{ justify-content:flex-end; padding: 8px 14px; }
+    td.td-actions::before{ content:''; }
+    .chip{ font-size:13px; padding:6px 13px; }
   }
 </style>
 </head>
@@ -260,12 +295,8 @@
         <input type="text" id="vendaNome" required>
       </div>
       <div class="field f-num">
-        <label for="vendaCartoes">Cartões avulsos</label>
+        <label for="vendaCartoes">Cartões</label>
         <input type="number" id="vendaCartoes" min="0" value="0">
-      </div>
-      <div class="field f-num">
-        <label for="vendaFolhas">Folhas (16 un.)</label>
-        <input type="number" id="vendaFolhas" min="0" value="0">
       </div>
       <div class="field f-tel">
         <label for="vendaTel">Telefone</label>
@@ -280,8 +311,8 @@
           <tr>
             <th>Nome</th>
             <th>Cartões</th>
-            <th>Folhas</th>
             <th>Valor</th>
+            <th>Entrega</th>
             <th>Pagamento</th>
             <th>Telefone</th>
             <th></th>
@@ -426,17 +457,7 @@ function turmaStatus(item){
   if(item.recebido >= esperado) return 'pago';
   return 'parcial';
 }
-function vendaValor(item){ return (Number(item.folhas||0) * PRECO_FOLHA) + (Number(item.cartoes||0) * PRECO_CARTAO); }
-
-// A cada 16 cartões avulsos, converte automaticamente em 1 folha completa
-function normalizeVenda(item){
-  item.cartoes = Number(item.cartoes) || 0;
-  item.folhas = Number(item.folhas) || 0;
-  while(item.cartoes >= 16){
-    item.cartoes -= 16;
-    item.folhas += 1;
-  }
-}
+function vendaValor(item){ return Number(item.cartoes||0) * PRECO_CARTAO; }
 
 function migrateVendas(){
   state.vendas.forEach(item=>{
@@ -446,7 +467,8 @@ function migrateVendas(){
       item.cartoes = total % 16;
     }
     if(item.cartoes === undefined) item.cartoes = 0;
-    if(item.folhas === undefined) item.folhas = 0;
+    if(item.folhas){ item.cartoes += Number(item.folhas) * 16; item.folhas = 0; } // folhas descontinuado: vira cartões
+    if(item.entregue === undefined) item.entregue = false;
   });
 }
 
@@ -457,7 +479,7 @@ function computeTotals(){
   const totalVendasPendente = state.vendas.filter(v=>!v.pago).reduce((s,v)=> s + vendaValor(v), 0);
   const totalArrecadado = totalRecebidoTurma + totalVendasPago;
   const totalPendente = (totalEsperadoTurma - totalRecebidoTurma) + totalVendasPendente;
-  const totalCartoes = state.vendas.reduce((s,v)=> s + Number(v.folhas||0)*16 + Number(v.cartoes||0), 0) + state.turma.reduce((s,i)=> s + Number(i.folhas||0)*16, 0);
+  const totalCartoes = state.vendas.reduce((s,v)=> s + Number(v.cartoes||0), 0) + state.turma.reduce((s,i)=> s + Number(i.folhas||0)*16, 0);
   return { totalEsperadoTurma, totalRecebidoTurma, totalVendasPago, totalVendasPendente, totalArrecadado, totalPendente, totalCartoes };
 }
 
@@ -494,12 +516,12 @@ function renderTurma(){
     const statusLabel = status === 'pago' ? 'Concluído' : status === 'parcial' ? 'Parcial' : 'Pendente';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" value="${escapeAttr(item.nome)}" data-id="${item.id}" data-field="nome" data-type="turma"></td>
-      <td><input type="number" min="1" value="${item.folhas}" data-id="${item.id}" data-field="folhas" data-type="turma"></td>
-      <td class="valor">${brl(esperado)}</td>
-      <td><input type="number" min="0" value="${item.recebido}" data-id="${item.id}" data-field="recebido" data-type="turma"></td>
-      <td><span class="chip ${status}">${statusLabel}</span></td>
-      <td><button class="del-btn" data-id="${item.id}" data-type="turma" title="Remover">×</button></td>
+      <td data-label="Nome"><input type="text" value="${escapeAttr(item.nome)}" data-id="${item.id}" data-field="nome" data-type="turma"></td>
+      <td data-label="Folhas"><input type="number" min="1" value="${item.folhas}" data-id="${item.id}" data-field="folhas" data-type="turma"></td>
+      <td data-label="Esperado" class="valor">${brl(esperado)}</td>
+      <td data-label="Recebido"><input type="number" min="0" value="${item.recebido}" data-id="${item.id}" data-field="recebido" data-type="turma"></td>
+      <td data-label="Status"><span class="chip ${status}">${statusLabel}</span></td>
+      <td class="td-actions"><button class="del-btn" data-id="${item.id}" data-type="turma" title="Remover">×</button></td>
     `;
     body.appendChild(tr);
   });
@@ -516,13 +538,13 @@ function renderVendas(){
     const valor = vendaValor(item);
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" value="${escapeAttr(item.nome)}" data-id="${item.id}" data-field="nome" data-type="venda"></td>
-      <td><input type="number" min="0" value="${item.cartoes}" data-id="${item.id}" data-field="cartoes" data-type="venda"></td>
-      <td><input type="number" min="0" value="${item.folhas}" data-id="${item.id}" data-field="folhas" data-type="venda"></td>
-      <td class="valor">${brl(valor)}</td>
-      <td><button class="chip ${item.pago ? 'pago' : 'pendente'}" data-id="${item.id}" data-type="pagamento">${item.pago ? '✓ Pago' : '✗ Pendente'}</button></td>
-      <td><input type="text" value="${escapeAttr(item.telefone||'')}" data-id="${item.id}" data-field="telefone" data-type="venda" placeholder="—"></td>
-      <td><button class="del-btn" data-id="${item.id}" data-type="venda" title="Remover">×</button></td>
+      <td data-label="Nome"><input type="text" value="${escapeAttr(item.nome)}" data-id="${item.id}" data-field="nome" data-type="venda"></td>
+      <td data-label="Cartões"><input type="number" min="0" value="${item.cartoes}" data-id="${item.id}" data-field="cartoes" data-type="venda"></td>
+      <td data-label="Valor" class="valor">${brl(valor)}</td>
+      <td data-label="Entrega"><button class="chip ${item.entregue ? 'entregue' : 'naoentregue'}" data-id="${item.id}" data-type="entrega">${item.entregue ? '✓ Entregue' : '○ Não entregue'}</button></td>
+      <td data-label="Pagamento"><button class="chip ${item.pago ? 'pago' : 'pendente'}" data-id="${item.id}" data-type="pagamento">${item.pago ? '✓ Pago' : '✗ Pendente'}</button></td>
+      <td data-label="Telefone"><input type="text" value="${escapeAttr(item.telefone||'')}" data-id="${item.id}" data-field="telefone" data-type="venda" placeholder="—"></td>
+      <td class="td-actions"><button class="del-btn" data-id="${item.id}" data-type="venda" title="Remover">×</button></td>
     `;
     body.appendChild(tr);
   });
@@ -553,16 +575,13 @@ document.getElementById('formVendas').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const nome = document.getElementById('vendaNome').value.trim();
   const cartoes = Number(document.getElementById('vendaCartoes').value) || 0;
-  const folhas = Number(document.getElementById('vendaFolhas').value) || 0;
   const telefone = document.getElementById('vendaTel').value.trim();
   if(!nome) return;
-  if(cartoes <= 0 && folhas <= 0) return;
-  const item = { id: uid(), nome, cartoes, folhas, telefone, pago: false };
-  normalizeVenda(item);
+  if(cartoes <= 0) return;
+  const item = { id: uid(), nome, cartoes, folhas: 0, telefone, pago: false, entregue: false };
   state.vendas.push(item);
   e.target.reset();
   document.getElementById('vendaCartoes').value = 0;
-  document.getElementById('vendaFolhas').value = 0;
   renderAll();
   await saveState();
 });
@@ -582,9 +601,6 @@ document.body.addEventListener('change', async (e)=>{
   } else {
     item[field] = Number(t.value) || 0;
   }
-  if(type === 'venda' && (field === 'cartoes' || field === 'folhas')){
-    normalizeVenda(item);
-  }
   renderAll();
   await saveState();
 });
@@ -596,6 +612,12 @@ document.body.addEventListener('click', async (e)=>{
     const id = t.dataset.id;
     const item = state.vendas.find(i=> i.id === id);
     if(item){ item.pago = !item.pago; renderAll(); await saveState(); }
+    return;
+  }
+  if(t.dataset && t.dataset.type === 'entrega'){
+    const id = t.dataset.id;
+    const item = state.vendas.find(i=> i.id === id);
+    if(item){ item.entregue = !item.entregue; renderAll(); await saveState(); }
     return;
   }
   if(t.classList.contains('del-btn')){
